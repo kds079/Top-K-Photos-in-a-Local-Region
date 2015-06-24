@@ -50,6 +50,7 @@ def computeTfIdf(jsonFName):
 
 	vocabulary = []
 	regions = {}
+	photoWordList = {}
 
 	for folder in glob.glob(jsonFName + '/*'):
 		regions[folder] = {'freq':{}, 'tf':{}, 'idf':{}, 'tf-idf':{}, 'tokens':[]}
@@ -62,6 +63,8 @@ def computeTfIdf(jsonFName):
 		# stemmer = PorterStemmer()
 
 		final_tokens = []
+
+
 		for file in files:
 
 			f = open(file, 'r')
@@ -69,6 +72,8 @@ def computeTfIdf(jsonFName):
 
 			data = json.load(f)
 			for photo in data['photo']:
+
+				photoTokens = set()
 
 				# eliminate duplicate user's photos which has more than three
 				userId = photo['owner']['path_alias']
@@ -95,6 +100,8 @@ def computeTfIdf(jsonFName):
 				count.update(filtered)
 				final_tokens.extend(filtered)
 
+				photoTokens.update(filtered)
+
 				# tag
 				tags = photo['tags']['tag']
 
@@ -104,7 +111,12 @@ def computeTfIdf(jsonFName):
 					filtered = [w for w in tokens if not w in stopset]
 					count.update(filtered)
 					final_tokens.extend(filtered)
+					photoTokens.update(filtered)
 				total = sum(count.values())
+
+				# Photo words list
+				photoId = photo['id']
+				photoWordList.update({photoId:photoTokens})
 
 		for token in final_tokens:
 			regions[folder]['freq'][token] = freq(token, final_tokens)
@@ -127,6 +139,7 @@ def computeTfIdf(jsonFName):
 
 			regions[folder]['tf-idf'][token] = tf_idf(token, regions[folder]['tokens'], vocabulary)
 
+	topTfIdfwords = {}
 
 	for region in regions:
 		words = {}
@@ -137,13 +150,21 @@ def computeTfIdf(jsonFName):
 				if regions[region]['tf-idf'][token] > words[token]:
 					words[token] = regions[region]['tf-idf'][token]
 
+		topWords = []
 		i = 0
 		print('=============>' + region)
 		for item in sorted(words.items(), key=lambda x: x[1], reverse= True):
+			topWords.append(item[0])
 			print "%f <= %s" % (item[1], item[0])
 			i += 1
 			if i>10:
 				break
+		tmp = {region:topWords}
+		topTfIdfwords.update(tmp)
+
+	return topTfIdfwords, photoWordList
+
+
 
 if __name__ == '__main__':
 	print('========================================')

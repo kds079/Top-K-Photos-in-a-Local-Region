@@ -5,6 +5,9 @@ from numpy import zeros, histogram, resize, sqrt, vstack, zeros_like, concatenat
 import scipy.cluster.vq as vq
 from cPickle import dump, HIGHEST_PROTOCOL, load
 import pagerank
+import tfidf
+import json
+
 
 PRE_ALLOCATION_BUFFER = 1000  # for sift
 EXTENSIONS = [".jpg", ".bmp", ".png", ".pgm", ".tif", ".tiff"]
@@ -26,6 +29,55 @@ def get_imgfiles(path):
 	print files
 	all_files.extend(files)
 	return all_files
+
+def getTagBasedImgFiles(path):
+	allFiles = []
+
+	# get topTfIdfwords & photoWordsList
+	jsonFName = 'fdataset'
+	regionId = ''
+	topTfIdfwords, photoWordsList = tfidf.computeTfIdf(jsonFName)
+	cmpPath = path[len('photo_'):]
+	for key in topTfIdfwords:
+		if cmpPath in key:
+			regionId = key
+			break
+	topWordList = topTfIdfwords[regionId]
+	print topWordList
+
+	#get files contains topwords
+	for folder in glob.glob(path + '/*'):
+	 	for file in glob.glob(folder + '/*'):
+			photoId = file[-15:-4]
+			if photoId in photoWordsList:
+				photoWordSet = photoWordsList[photoId]
+				# photoWordSet = photoWordsList[key]
+				for word in photoWordSet:
+					if word in topWordList:
+						allFiles.append(file)
+
+	return allFiles
+
+	# 		f = open(file, 'r')
+	# 		print('>>> ' + file)
+    #
+	# 		data = json.load(f)
+	# 		for photo in data['photo']:
+	# 			photo[]
+	#
+	#
+	# files = [fName
+	# 		 for folder in glob.glob(path + '/*')
+	# 		 # for folder in glob.glob(path + '/seoul1')
+	# 		 	for fName in glob.glob(folder + '/*')
+	# 		 	if splitext(fName)[-1].lower() in EXTENSIONS]
+    #
+    #
+	# print files
+	# all_files.extend(files)
+
+
+
 
 
 def extractSift(input_files):
@@ -133,6 +185,8 @@ if __name__ == '__main__':
 
 	# all_files = get_imgfiles('./dataset/train')
 	all_files = get_imgfiles('photo_Seoul_0515')
+	# all_files = getTagBasedImgFiles('photo_jongnogu_0101')
+	# all_files = getTagBasedImgFiles('photo_junggu_0101')
 	print all_files
 	all_features = extractSift(all_files)
 
@@ -156,5 +210,5 @@ if __name__ == '__main__':
 	# also refer https://github.com/timothyasp/PageRank
 	rank = pagerank.pageRank(matrix, s=.86)
 	rankIndex = rank.argsort()[::-1]
-	for i in range(0,10):
+	for i in range(0,30):
 		print( str(i) + ": " + str(rank[rankIndex[i]]) + ' - ' + all_files[rankIndex[i]])
