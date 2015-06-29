@@ -3,8 +3,11 @@ import json
 import os
 import urllib
 import glob
+import sys
 
-def getPhotoJson(jsonFileName):
+def getPhotoJson(jsonFileName, placeId, timestamp):
+	rawPhotos = []
+
 	api_key = '04f85ab214f51fec3f314dfacac262f0'
 	api_secret = '313d2166d21addb0'
 
@@ -13,55 +16,92 @@ def getPhotoJson(jsonFileName):
 
 	# sets = flickr.places.find(query="kaist")
 
-	# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", place_id='nz.gsghTUb4c2WAecA' )
-	# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos",  accuracy=11, place_id = 'MivxyNZQU7lbWxZ_' )
-	# raw_photos = flickr.photos.search(text = 'coex', min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11)#, place_id = 'cLDVUC9TWribwZR3JQ')
-	# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg')
-	# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg')
-	# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'P6trs9NTWrjlJ6MVrA')
-	raw_photos = flickr.photos.search(min_taken_date=1388534400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Ez3nlixTWrgxk5hPQw')
+	raw_photos = flickr.photos.search(min_taken_date=timestamp, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = placeId)
 
 	#print(raw_photos.decode('utf-8'))
 	photos = json.loads(raw_photos.decode('utf-8'))
 	total_page = photos['photos']['pages']
+	rawPhotos.append(raw_photos)
 
-	page = 1
+	for i in range(2,total_page+1):
+		raw_photos = flickr.photos.search(min_taken_date=timestamp, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = placeId, page = i)
+		rawPhotos.append(raw_photos)
 
-	for i in range(total_page):
-		photo_fname = jsonFileName + '/photos' + str(i+1) + ".txt"
+	pNumber = 1
+	for rawPhoto in rawPhotos:
+
+		photo_fname = jsonFileName + '/photos' + str(pNumber) + ".txt"
 		if not os.path.exists(os.path.dirname(photo_fname)):
 					os.makedirs(os.path.dirname(photo_fname))
 		f = open(photo_fname, 'w')
 		f.write("{\"photo\":[")
-		# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", place_id='nz.gsghTUb4c2WAecA' , page = (i+1))
-		# seoul
-		#raw_photos = flickr.photos.search(min_taken_date=1433116800, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'MivxyNZQU7lbWxZ_' , page = (i+1))
-		# jongno gu
-		# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'cLDVUC9TWribwZR3JQ' , page = (i+1))
-		# jung gu
-		# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg', page = (i+1))
-		# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg', page = (i+1))
-		# Gangnam gu
-		# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'P6trs9NTWrjlJ6MVrA', page = (i+1))
-		#'place_id': u'Ez3nlixTWrgxk5hPQw', u'_content': u'Yuseong-Gu'}
-		raw_photos = flickr.photos.search(min_taken_date=1388534400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Ez3nlixTWrgxk5hPQw', page = (i+1))
 
-		photos1 = json.loads(raw_photos.decode('utf-8'))
+		photos1 = json.loads(rawPhoto.decode('utf-8'))
 		photos = photos1['photos']['photo']
 		print(">>>>>>>>>>>>>>>>>>>>>>>page : " + str(photos1['photos']['page']))
 
+		photoDic = set()
 		for j in range(len(photos)):
 			#print(photos[j]['id'])
+			photoId = photos[j]['id']
+			if photoId in photoDic:
+				print('error=============')
+				sys.exit(999)
+			photoDic.add(photoId)
 			raw_photo = flickr.photos.getInfo(photo_id = photos[j]['id'])
 			photo = json.loads(raw_photo.decode('utf-8'))
 			f.write(json.dumps(photo['photo']))
 			if j != (len(photos)-1):
 				f.write(",")
-			#print(photo)
+			print(photo)
 			print(">>>>>> j : " + str(j))
 
 		f.write("]}");
 		f.close()
+		pNumber += 1
+
+
+
+
+
+
+
+	# for i in range(total_page):
+	# 	photo_fname = jsonFileName + '/photos' + str(i+1) + ".txt"
+	# 	if not os.path.exists(os.path.dirname(photo_fname)):
+	# 				os.makedirs(os.path.dirname(photo_fname))
+	# 	f = open(photo_fname, 'w')
+	# 	f.write("{\"photo\":[")
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", place_id='nz.gsghTUb4c2WAecA' , page = (i+1))
+	# 	# seoul
+	# 	#raw_photos = flickr.photos.search(min_taken_date=1433116800, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'MivxyNZQU7lbWxZ_' , page = (i+1))
+	# 	# jongno gu
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'cLDVUC9TWribwZR3JQ' , page = (i+1))
+	# 	# jung gu
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1430438400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg', page = (i+1))
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1388534400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Flh3hrJTWriST0HwPg', page = (i+1))
+	# 	# Gangnam gu
+	# 	raw_photos = flickr.photos.search(min_taken_date=1388534400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'P6trs9NTWrjlJ6MVrA', page = (i+1))
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1420070400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'P6trs9NTWrjlJ6MVrA', page = (i+1))
+	# 	#'place_id': u'Ez3nlixTWrgxk5hPQw', u'_content': u'Yuseong-Gu'}
+	# 	# raw_photos = flickr.photos.search(min_taken_date=1388534400, privacy_filter=1, has_geo=1,media="photos", accuracy=11, place_id = 'Ez3nlixTWrgxk5hPQw', page = (i+1))
+    #
+	# 	photos1 = json.loads(raw_photos.decode('utf-8'))
+	# 	photos = photos1['photos']['photo']
+	# 	print(">>>>>>>>>>>>>>>>>>>>>>>page : " + str(photos1['photos']['page']))
+    #
+	# 	for j in range(len(photos)):
+	# 		#print(photos[j]['id'])
+	# 		raw_photo = flickr.photos.getInfo(photo_id = photos[j]['id'])
+	# 		photo = json.loads(raw_photo.decode('utf-8'))
+	# 		f.write(json.dumps(photo['photo']))
+	# 		if j != (len(photos)-1):
+	# 			f.write(",")
+	# 		#print(photo)
+	# 		print(">>>>>> j : " + str(j))
+    #
+	# 	f.write("]}");
+	# 	f.close()
 
 def getPhoto(jsonFName, photoFolder):
 	userPhotoCnt = {}
@@ -121,13 +161,33 @@ def getPhoto(jsonFName, photoFolder):
 
 if __name__ == '__main__':
 
+	#Gangnamgu
+	# placeId = 'P6trs9NTWrjlJ6MVrA'
+	#Jongnogu
+	# placeId = 'cLDVUC9TWribwZR3JQ'
+	#Junggu
+	placeId = 'Flh3hrJTWriST0HwPg'
+	#Yuseonggu
+	# placeId = 'Ez3nlixTWrgxk5hPQw'
+	#Seoul
+	# placeId = 'MivxyNZQU7lbWxZ_'
+
+
+	#150101
+	# timestamp = 1430438400
+	#140101
+	timestamp = 1388534400
+
 	# jsonFName = 'json_photos_jongno_0515'
 	# jsonFName = 'json_photos_test_0101'
-	jsonFName = 'json_photos_yuseonggu_0101'
-	getPhotoJson(jsonFName)
+	# jsonFName = 'json_photos_gangnamgu_150101'
+	# jsonFName = 'json_photos_jongnotest2_150101'
+	jsonFName = 'json_photos_junggu_140101'
+	getPhotoJson(jsonFName, placeId, timestamp)
 
 	# photoFolder = 'photo_jongno_0515'
 	# photoFolder = 'photo_test_0101'
-	photoFolder = 'photo_yuseonggu_0101'
+	# photoFolder = 'photo_jongnotest2_150101'
+	photoFolder = 'photo_junggu_140101'
 	getPhoto(jsonFName, photoFolder)
 

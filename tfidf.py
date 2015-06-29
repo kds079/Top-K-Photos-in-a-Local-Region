@@ -8,7 +8,7 @@ from collections import Counter
 from nltk.stem.porter import *
 import unicodedata as uni
 import math
-
+import sys
 
 def stem_tokens(tokens, stemmer):
 	stemmed = []
@@ -70,6 +70,7 @@ def computeTfIdf(jsonFName):
 			f = open(file, 'r')
 			print('>>> ' + file)
 
+			fildId = file[len(folder+'/photos'):-4]
 			data = json.load(f)
 			for photo in data['photo']:
 
@@ -94,8 +95,17 @@ def computeTfIdf(jsonFName):
 				# title = title.translate(None, string.punctuation)
 				# tokens = tokenizer.tokenize(title)
 				tokens = word_tokenize(title)
+
 				# filtered = [strip_punctuation(word) for word in tokens]
 				filtered = [w for w in tokens if not w in stopset]
+				# usase for duplicate work in a photo info
+				# 1. remove duplicate word in a photo info
+				filterSet = set()
+				for token in filtered:
+					filterSet.add(token)
+
+				filtered = list(filterSet)
+
 				# stemmed = stem_tokens(filtered, stemmer)
 				count.update(filtered)
 				final_tokens.extend(filtered)
@@ -105,17 +115,22 @@ def computeTfIdf(jsonFName):
 				# tag
 				tags = photo['tags']['tag']
 
+
 				for tag in tags:
 					tagToken = tag['_content']
 					tokens = word_tokenize(tagToken)
+					# filtered = [strip_punctuation(word) for word in tokens]
 					filtered = [w for w in tokens if not w in stopset]
+
 					count.update(filtered)
 					final_tokens.extend(filtered)
 					photoTokens.update(filtered)
 				total = sum(count.values())
 
 				# Photo words list
-				photoId = photo['id']
+				photoId = fildId + '_'+photo['id']
+				if photoId in photoWordList:
+					sys.exit(888)
 				photoWordList.update({photoId:photoTokens})
 
 		for token in final_tokens:
@@ -150,14 +165,17 @@ def computeTfIdf(jsonFName):
 				if regions[region]['tf-idf'][token] > words[token]:
 					words[token] = regions[region]['tf-idf'][token]
 
-		topWords = []
+		# topWords = []
+		topWords = {}
 		i = 0
 		print('=============>' + region)
 		for item in sorted(words.items(), key=lambda x: x[1], reverse= True):
-			topWords.append(item[0])
+			# topWords.append(item[0])
+			topWords[item[0]] = item[1]
 			print "%f <= %s" % (item[1], item[0])
 			i += 1
-			if i>10:
+			# Top 20
+			if i>20:
 				break
 		tmp = {region:topWords}
 		topTfIdfwords.update(tmp)

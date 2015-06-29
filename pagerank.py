@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.sparse import csc_matrix
 
-def pageRank(G, s = .85, maxerr = .001, sIter = 30):
+def pageRank(G, s = .85, maxerr = .001, sIter = 30, rwVector = None):
     """
     Computes the pagerank for each of the n states.
 
@@ -37,27 +37,33 @@ def pageRank(G, s = .85, maxerr = .001, sIter = 30):
     sink = rsums==0
 
     # Compute pagerank r until we converge
-    ro, r = np.zeros(n), np.ones(n)
+    ro, r = np.zeros(n),  np.ones(n) / float(n)  #np.ones(n)
     nIter = 0
+    Ti = []
     while (np.sum(np.abs(r-ro)) > maxerr) and (nIter < sIter):
         ro = r.copy()
         # calculate each pagerank at a time
         for i in xrange(0,n):
             # inlinks of state i
-            Ii = np.array(M[:,i].todense())[:,0]
+            # tmp = M[:,i].todense()
+            tmp = M[i,:].todense()
+            # Ii = np.array(tmp)[:,0]
+            Ii = np.array(tmp)
             # account for sink states
             Si = sink / float(n)
             # account for teleportation to state i
-            Ti = np.ones(n) / float(n)
+            if rwVector is None:
+                Ti = np.ones(n) / float(n)
+            else:
+                Ti = np.array(rwVector)
 
-            r[i] = ro.dot( Ii*s + Si*s + Ti*(1-s) )
-            a = Ii*s + Si*s + Ti*(1-s)
-            b = ro
-            c = ro.dot( Ii*s + Si*s + Ti*(1-s) )
-            d = np.sum(a[:21])
-            e = np.sum(a[21:42])
-            e = c
+            tmp2 = Ii*s + Si*s + Ti*(1-s)
+            sum1 = sum(tmp2)
+            # r[i] = ro.dot( Ii*s + Si*s + Ti*(1-s) )
+            r[i] = (Ii*s).dot(ro) + Ti[i]*(1-s)
         nIter += 1
+    print('pagerank iteration : ' + str(nIter))
+    # print(sum(Ti))
 
     print(np.sum(r/sum(r)))
     # return normalized pagerank
@@ -68,6 +74,7 @@ def pageRank(G, s = .85, maxerr = .001, sIter = 30):
 
 if __name__=='__main__':
     # Example extracted from 'Introduction to Information Retrieval'
+
     G = np.array([[0,0,4,0,0,0,0],
                   [0,1,1,0,0,0,0],
                   [3,0,5,1,0,0,0],
@@ -75,6 +82,14 @@ if __name__=='__main__':
                   [0,0,0,0,0,0,1],
                   [0,0,0,0,0,1,1],
                   [0,0,0,1,4,0,1]])
+
+    # G = np.array([[0,0,4,0,0,0,0],
+    #               [0,1,1,0,0,0,0],
+    #               [3,0,5,1,0,0,0],
+    #               [0,0,0,1,1,0,0],
+    #               [0,0,0,0,0,0,1],
+    #               [0,0,0,0,0,1,1],
+    #               [0,0,0,1,4,0,1]])
     # G = np.array([[0,1,1,1,1],
     #               [1,0,1,3,1],
     #               [1,2,0,5,6],
